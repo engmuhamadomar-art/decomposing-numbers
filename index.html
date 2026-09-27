@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Decompose a Decimal Number</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=Inter:wght@400;500;600&display=swap');
+
+  :root{
+    --blue:#2563eb;
+    --green:#0f9d58;
+    --pink:#e11d48;
+    --ink:#0f2742;
+    --muted:#7c8794;
+    --line:#d7dce3;
+    --paper:#fbfbf9;
+    --panel:#ffffff;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      linear-gradient(90deg, rgba(37,99,235,0.05) 1px, transparent 1px) 0 0/32px 32px,
+      linear-gradient(rgba(37,99,235,0.05) 1px, transparent 1px) 0 0/32px 32px,
+      var(--paper);
+    color:var(--ink);
+    font-family:'Inter',sans-serif;
+    min-height:100vh;
+    padding:26px 20px 60px;
+  }
+  .wrap{max-width:1140px;margin:0 auto;}
+  h1{
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:700;
+    font-size:24px;
+    margin:0 0 4px;
+  }
+  header p{margin:0;color:var(--muted);font-size:14px;max-width:680px;line-height:1.5;}
+
+  .controls{
+    display:flex;flex-wrap:wrap;align-items:center;gap:10px;
+    margin:20px 0 6px;
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:12px 14px;
+  }
+  #numInput{
+    font-family:'Inter',sans-serif;
+    font-size:16px;
+    padding:9px 12px;
+    border:1px solid var(--line);
+    border-radius:7px;
+    width:160px;
+    color:var(--ink);
+  }
+  #numInput:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(37,99,235,0.15);}
+  button{
+    font-family:'Inter',sans-serif;
+    font-size:14px;
+    font-weight:600;
+    padding:9px 16px;
+    border-radius:7px;
+    border:1px solid transparent;
+    cursor:pointer;
+  }
+  #submitBtn{background:var(--blue);color:#fff;}
+  #submitBtn:hover{background:#1d4fc7;}
+  #decomposeBtn{background:var(--green);color:#fff;}
+  #decomposeBtn:hover{background:#0c7d46;}
+  #decomposeBtn:disabled{background:#b9c3cd;cursor:not-allowed;}
+  #resetBtn{background:transparent;border-color:var(--line);color:var(--muted);}
+  #resetBtn:hover{color:var(--ink);border-color:#b9c3cd;}
+  #errMsg{color:var(--pink);font-size:13px;font-weight:600;margin-left:4px;}
+
+  #stage{
+    position:relative;
+    width:100%;
+    margin-top:10px;
+    overflow-x:auto;
+  }
+  #stageInner{position:relative;min-height:320px;}
+
+  #numberZone{
+    position:absolute;
+    left:50%;top:50%;
+    transform:translate(-50%,-50%);
+    display:inline-flex;
+    border-radius:9px;
+    overflow:hidden;
+    box-shadow:0 2px 10px rgba(15,39,66,0.12);
+  }
+  .cell{width:58px;display:flex;flex-direction:column;align-items:stretch;background:#fff;}
+  .cell + .cell{border-left:1px solid var(--line);}
+  .cell .head{
+    font-size:10px;letter-spacing:0.5px;text-transform:uppercase;
+    color:var(--muted);background:#eef1f6;text-align:center;
+    padding:5px 0;border-bottom:1px solid var(--line);
+  }
+  .cell .digit{
+    font-size:32px;font-weight:700;color:var(--blue);
+    text-align:center;padding:14px 0;font-variant-numeric:tabular-nums;
+  }
+  .cell.point{width:24px;}
+  .cell.point .head{visibility:hidden;}
+  .cell.point .digit{color:var(--ink);}
+
+  #overlaySvg{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;}
+  #labelLayer{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;}
+  .val-box{
+    position:absolute;
+    transform:translate(-50%,-50%);
+    font-size:19px;font-weight:700;
+    font-variant-numeric:tabular-nums;
+    padding:2px 8px;
+    border-radius:6px;
+    background:#fff;
+    opacity:0;
+    transition:opacity .35s ease, transform .35s ease;
+  }
+  .val-box.whole{color:var(--green);}
+  .val-box.dec{color:var(--pink);}
+  .val-box.show{opacity:1;}
+  .lbl{
+    position:absolute;
+    transform:translateY(-50%);
+    font-size:14px;font-weight:600;
+    white-space:nowrap;
+    opacity:0;
+    transition:opacity .35s ease;
+  }
+  .lbl.whole{color:var(--green);text-align:left;}
+  .lbl.dec{color:var(--pink);text-align:right;}
+  .lbl.show{opacity:1;}
+
+  .hint{font-size:12.5px;color:var(--muted);margin-top:14px;line-height:1.5;}
+  .hint b{color:var(--ink);}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Decompose a decimal number</h1>
+    <p>Enter a number, see it placed in a place value chart, then press <b>Decompose</b> to reveal what each digit is really worth.</p>
+  </header>
+
+  <div class="controls">
+    <input type="text" id="numInput" placeholder="e.g. 34.56" inputmode="decimal">
+    <button id="submitBtn">Submit</button>
+    <button id="decomposeBtn" disabled>Decompose</button>
+    <button id="resetBtn">Reset</button>
+    <span id="errMsg"></span>
+  </div>
+
+  <div id="stage">
+    <div id="stageInner">
+      <svg id="overlaySvg">
+        <defs>
+          <marker id="arrowGreen" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+            <path d="M0,0 L8,4 L0,8 z" fill="#0f9d58"/>
+          </marker>
+          <marker id="arrowPink" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+            <path d="M0,0 L8,4 L0,8 z" fill="#e11d48"/>
+          </marker>
+        </defs>
+        <g id="arrowsG"></g>
+      </svg>
+      <div id="labelLayer"></div>
+      <div id="numberZone"></div>
+    </div>
+  </div>
+
+  <p class="hint">Tip: click <b>Submit</b> whenever you type a new number — it will reset the chart. <b>Decompose</b> can be pressed again any time to replay the reveal.</p>
+</div>
+
+<script>
+(function(){
+  var SVGNS = "http://www.w3.org/2000/svg";
+  var wholeNames = ['ones','tens','hundreds','thousands','ten thousands','hundred thousands','millions'];
+  var decNames   = ['tenths','hundredths','thousandths','ten thousandths'];
+
+  var ROW_H = 62;      // vertical gap per place level
+  var BASE_GAP = 46;   // gap from chart edge to first row
+  var LABEL_GAP = 26;  // gap from chart edge (horizontally) to label column
+  var MARGIN = 40;     // extra margin around the whole layout
+
+  var numInput = document.getElementById('numInput');
+  var submitBtn = document.getElementById('submitBtn');
+  var decomposeBtn = document.getElementById('decomposeBtn');
+  var resetBtn = document.getElementById('resetBtn');
+  var errMsg = document.getElementById('errMsg');
+  var stage = document.getElementById('stage');
+  var stageInner = document.getElementById('stageInner');
+  var numberZone = document.getElementById('numberZone');
+  var arrowsG = document.getElementById('arrowsG');
+  var labelLayer = document.getElementById('labelLayer');
+  var overlaySvg = document.getElementById('overlaySvg');
+
+  var current = null; // {wholeStr, decStr}
+
+  function clearError(){ errMsg.textContent=''; }
+  function showError(msg){ errMsg.textContent = msg; }
+
+  function parseInput(raw){
+    var s = raw.trim();
+    if(!/^\d+(\.\d+)?$/.test(s)) return null;
+    var parts = s.split('.');
+    var wholeStr = parts[0].replace(/^0+(?=\d)/,'');
+    if(wholeStr === '') wholeStr = '0';
+    var decStr = parts.length>1 ? parts[1] : '';
+    return {wholeStr:wholeStr, decStr:decStr};
+  }
+
+  function buildChart(wholeStr, decStr){
+    numberZone.innerHTML = '';
+    var wl = wholeStr.length;
+    for(var i=0;i<wl;i++){
+      var place = wl-1-i;
+      numberZone.appendChild(makeCell(wholeStr[i], wholeNames[place] || ''));
+    }
+    if(decStr.length>0){
+      numberZone.appendChild(makePointCell());
+      for(var j=0;j<decStr.length;j++){
+        numberZone.appendChild(makeCell(decStr[j], decNames[j] || ''));
+      }
+    }
+  }
+  function makeCell(digit, headText){
+    var cell = document.createElement('div');
+    cell.className = 'cell';
+    cell.innerHTML = '<div class="head">'+headText+'</div><div class="digit">'+digit+'</div>';
+    return cell;
+  }
+  function makePointCell(){
+    var cell = document.createElement('div');
+    cell.className = 'cell point';
+    cell.innerHTML = '<div class="head">&nbsp;</div><div class="digit">.</div>';
+    return cell;
+  }
+
+  function clearOverlay(){
+    arrowsG.innerHTML = '';
+    labelLayer.innerHTML = '';
+  }
+
+  function setStageHeight(wholeLen, decLen){
+    var maxPlaces = Math.max(wholeLen, 1);
+    var maxDec = Math.max(decLen, 1);
+    var topSpace = wholeLen>0 ? (BASE_GAP + (wholeLen-1)*ROW_H + MARGIN) : 140;
+    var botSpace = decLen>0 ? (BASE_GAP + (decLen-1)*ROW_H + MARGIN) : 60;
+    var h = topSpace + botSpace + 90;
+    stageInner.style.height = Math.max(h, 320) + 'px';
+  }
+
+  function line(x1,y1,x2,y2,color,marker){
+    var l = document.createElementNS(SVGNS,'line');
+    l.setAttribute('x1',x1); l.setAttribute('y1',y1);
+    l.setAttribute('x2',x2); l.setAttribute('y2',y2);
+    l.setAttribute('stroke',color);
+    l.setAttribute('stroke-width','2.5');
+    if(marker) l.setAttribute('marker-end','url(#'+marker+')');
+    return l;
+  }
+
+  function valBox(text, x, y, cls){
+    var el = document.createElement('div');
+    el.className = 'val-box '+cls;
+    el.textContent = text;
+    el.style.left = x+'px';
+    el.style.top = y+'px';
+    return el;
+  }
+  function lblBox(text, x, y, cls, align){
+    var el = document.createElement('div');
+    el.className = 'lbl '+cls;
+    el.textContent = text;
+    el.style.top = y+'px';
+    if(align==='left'){ el.style.left = x+'px'; }
+    else { el.style.left = (x)+'px'; el.style.transform='translate(-100%,-50%)'; }
+    return el;
+  }
+
+  function decompose(){
+    if(!current) return;
+    clearOverlay();
+
+    var stageRect = stageInner.getBoundingClientRect();
+    var cells = numberZone.querySelectorAll('.cell:not(.point) .digit');
+    var wl = current.wholeStr.length;
+    var dl = current.decStr.length;
+
+    var zoneRect = numberZone.getBoundingClientRect();
+    var chartTop = zoneRect.top - stageRect.top;
+    var chartBottom = zoneRect.bottom - stageRect.top;
+    var chartRight = zoneRect.right - stageRect.left;
+    var chartLeft = zoneRect.left - stageRect.left;
+
+    var rightLabelX = chartRight + LABEL_GAP;
+    var leftLabelX = chartLeft - LABEL_GAP;
+
+    var delay = 0;
+    var STEP_DELAY = 90;
+
+    for(var i=0;i<wl;i++){
+      (function(i){
+        var digitEl = cells[i];
+        var r = digitEl.getBoundingClientRect();
+        var cx = r.left + r.width/2 - stageRect.left;
+        var digitTopY = r.top - stageRect.top;
+
+        var place = wl-1-i;
+        var digitChar = current.wholeStr[i];
+        if(digitChar === '0'){ return; }
+        var valueText = digitChar + '0'.repeat(place);
+        var rowY = digitTopY - (BASE_GAP + place*ROW_H);
+
+        var vArrow = line(cx, digitTopY-2, cx, rowY+14, '#0f9d58', 'arrowGreen');
+        var hArrow = line(rightLabelX-6, rowY, cx+26, rowY, '#0f9d58', 'arrowGreen');
+        arrowsG.appendChild(vArrow);
+        arrowsG.appendChild(hArrow);
+
+        var vb = valBox(valueText, cx, rowY, 'whole');
+        var lb = lblBox(digitChar+' '+wholeNames[place], rightLabelX, rowY, 'whole', 'left');
+        labelLayer.appendChild(vb);
+        labelLayer.appendChild(lb);
+
+        setTimeout(function(){ vb.classList.add('show'); lb.classList.add('show'); }, delay);
+      })(i);
+      delay += STEP_DELAY;
+    }
+
+    var decCells = numberZone.querySelectorAll('.cell:not(.point) .digit');
+    for(var j=0;j<dl;j++){
+      (function(j){
+        var digitEl = decCells[wl+j];
+        var r = digitEl.getBoundingClientRect();
+        var cx = r.left + r.width/2 - stageRect.left;
+        var digitBotY = r.bottom - stageRect.top;
+
+        var digitChar = current.decStr[j];
+        if(digitChar === '0'){ return; }
+        var valueText = '0.' + '0'.repeat(j) + digitChar;
+        var rowY = digitBotY + (BASE_GAP + j*ROW_H);
+
+        var vArrow = line(cx, digitBotY+2, cx, rowY-14, '#e11d48', 'arrowPink');
+        var hArrow = line(leftLabelX+6, rowY, cx-26, rowY, '#e11d48', 'arrowPink');
+        arrowsG.appendChild(vArrow);
+        arrowsG.appendChild(hArrow);
+
+        var vb = valBox(valueText, cx, rowY, 'dec');
+        var lb = lblBox(digitChar+' '+decNames[j], leftLabelX, rowY, 'dec', 'right');
+        labelLayer.appendChild(vb);
+        labelLayer.appendChild(lb);
+
+        setTimeout(function(){ vb.classList.add('show'); lb.classList.add('show'); }, delay);
+      })(j);
+      delay += STEP_DELAY;
+    }
+  }
+
+  submitBtn.addEventListener('click', function(){
+    clearError();
+    var raw = numInput.value;
+    if(raw.trim()===''){ showError('Type a number first.'); return; }
+    var parsed = parseInput(raw);
+    if(!parsed){ showError('Please enter a valid number, e.g. 34.56'); return; }
+    if(parsed.wholeStr.length > 7){ showError('That whole part is too long to display neatly (max 7 digits).'); return; }
+    if(parsed.decStr.length > 4){ showError('That decimal part is too long to display neatly (max 4 digits).'); return; }
+    current = parsed;
+    clearOverlay();
+    buildChart(parsed.wholeStr, parsed.decStr);
+    setStageHeight(parsed.wholeStr.length, parsed.decStr.length);
+    decomposeBtn.disabled = false;
+  });
+
+  numInput.addEventListener('keydown', function(e){
+    if(e.key === 'Enter'){ submitBtn.click(); }
+  });
+
+  decomposeBtn.addEventListener('click', function(){
+    decompose();
+  });
+
+  resetBtn.addEventListener('click', function(){
+    current = null;
+    clearError();
+    numInput.value = '';
+    numberZone.innerHTML = '';
+    clearOverlay();
+    stageInner.style.height = '320px';
+    decomposeBtn.disabled = true;
+  });
+
+  var resizeTimer = null;
+  window.addEventListener('resize', function(){
+    if(!current) return;
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(function(){ decompose(); }, 150);
+  });
+
+})();
+</script>
+</body>
+</html>
